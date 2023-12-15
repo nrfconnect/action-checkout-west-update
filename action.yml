@@ -1,0 +1,66 @@
+# This is composite action for handling cloning of nrf sources.
+# Uses checkout action and west update command.
+
+name: 'checkout and west update'
+description: 'checkout sources and runs west update'
+inputs:
+    git-fetch-depth:
+      required: false
+      type: string
+      default: 1
+      description: 'git fetch depth passed to checkout action.'
+    git-ref:
+      required: false
+      default: ''
+      type: string
+      description: 'git branch, tag or SHA passed to checkout action.'
+    path:
+      required: false
+      default: 'ncs/nrf'
+      description: 'Path passed to checkout action.'
+    west-token:
+      required: false
+      default: ''
+      type: string
+      description: 'Token used during the west update.'
+    west-update-args:
+      type: string
+      required: false
+      default: '--narrow -o=--depth=1'
+      description: 'Arguments for west update command.'
+
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout nrf
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.git-ref }}
+        path: ${{ inputs.path }}
+        fetch-depth: ${{ inputs.git-fetch-depth }}
+        persist-credentials: false
+
+    - name: Set git credentials
+      if: ${{ inputs.west-token != '' }}
+      shell: bash
+      run: |
+        git config --global credential.helper ""
+        git config --global --add credential.helper store
+        echo "https://x-access-token:${{ inputs.west-token }}@github.com" >> ~/.git-credentials
+
+    - name: West update
+      working-directory: ${{ inputs.path }}
+      shell: bash
+      run: |
+        pip3 install --user -U west
+        git config --global user.email "pylon@nordicsemi.no"
+        git config --global user.name "Nordic Builder"
+        west init -l .
+        west update ${{ inputs.west-update-args }}
+
+    - name: Remove git credentials
+      if: ${{ inputs.west-token != '' }}
+      shell: bash
+      run: |
+        rm ~/.git-credentials
