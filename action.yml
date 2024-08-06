@@ -58,6 +58,8 @@ runs:
         git config --global user.name "Nordic Builder"
         west init -l .
         west update ${{ inputs.west-update-args }}
+        # Wi-Fi FW blobs are not fetched by default in the west update command
+        west blobs fetch hal_nordic
 
     - name: Remove git credentials
       if: ${{ inputs.west-token != '' }}
