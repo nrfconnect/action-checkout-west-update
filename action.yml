@@ -52,14 +52,6 @@ runs:
         git config --global user.email "pylon@nordicsemi.no"
         git config --global user.name "Nordic Builder"
 
-    - name: Rebase PR
-      if: ${{ inputs.rebase == 'true' && github.event_name == 'pull_request' }}
-      working-directory: ${{ inputs.path }}
-      shell: bash
-      run: |
-        git fetch origin "${{ github.base_ref }}"
-        git rebase "origin/${{ github.base_ref }}"
-
     - name: Set git credentials
       if: ${{ inputs.west-token != '' }}
       shell: bash
@@ -67,6 +59,14 @@ runs:
         git config --global credential.helper ""
         git config --global --add credential.helper store
         echo "https://x-access-token:${{ inputs.west-token }}@github.com" >> ~/.git-credentials
+
+    - name: Rebase PR
+      if: ${{ inputs.rebase == 'true' && github.event_name == 'pull_request' }}
+      working-directory: ${{ inputs.path }}
+      shell: bash
+      run: |
+        git fetch origin "${{ github.base_ref }}"
+        git rebase "origin/${{ github.base_ref }}"
 
     - name: West update
       env:
