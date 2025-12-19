@@ -74,7 +74,7 @@ runs:
       working-directory: ${{ inputs.path }}
       shell: bash
       run: |
-        pip3 install west
+        pip3 install --user west
         west init -l .
         west update $WEST_UPDATE_ARGS
 
