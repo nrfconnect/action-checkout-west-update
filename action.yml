@@ -38,7 +38,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Checkout nrf
+    - name: Checkout repo
       uses: actions/checkout@v4
       with:
         ref: ${{ inputs.git-ref }}
