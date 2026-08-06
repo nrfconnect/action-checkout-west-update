@@ -33,13 +33,18 @@ inputs:
       required: false
       default: '--narrow -o=--depth=1'
       description: 'Arguments for west update command.'
+    manifest-file-path:
+      type: string
+      required: false
+      default: ''
+      description: 'If set, passed to west init as --manifest-file=<manifest-file-path>.'
 
 
 runs:
   using: "composite"
   steps:
     - name: Checkout repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       with:
         ref: ${{ inputs.git-ref }}
         path: ${{ inputs.path }}
@@ -54,32 +59,41 @@ runs:
 
     - name: Set git credentials
       if: ${{ inputs.west-token != '' }}
+      env:
+        WEST_TOKEN: ${{ inputs.west-token }}
       shell: bash
       run: |
         git config --global credential.helper ""
         git config --global --add credential.helper store
-        echo "https://x-access-token:${{ inputs.west-token }}@github.com" >> ~/.git-credentials
+        echo "https://x-access-token:${WEST_TOKEN}@github.com" >> ~/.git-credentials
 
     - name: Rebase PR
       if: ${{ inputs.rebase == 'true' && github.event_name == 'pull_request' }}
       working-directory: ${{ inputs.path }}
+      env:
+        BASE_REF: ${{ github.base_ref }}
       shell: bash
       run: |
-        git fetch origin "${{ github.base_ref }}"
-        git rebase "origin/${{ github.base_ref }}"
+        git fetch origin "$BASE_REF"
+        git rebase "origin/$BASE_REF"
 
     - name: West update
       env:
         WEST_UPDATE_ARGS: ${{ inputs.west-update-args }}
+        MANIFEST_FILE_PATH: ${{ inputs.manifest-file-path }}
       working-directory: ${{ inputs.path }}
       shell: bash
       run: |
         pip3 install west
-        west init -l .
+        WEST_INIT_ARGS=""
+        if [ -n "$MANIFEST_FILE_PATH" ]; then
+          WEST_INIT_ARGS="--manifest-file=$MANIFEST_FILE_PATH"
+        fi
+        west init ${WEST_INIT_ARGS:+"$WEST_INIT_ARGS"} --local .
         west update $WEST_UPDATE_ARGS
 
     - name: Remove git credentials
-      if: ${{ inputs.west-token != '' }}
+      if: ${{ always() && inputs.west-token != '' }}
       shell: bash
       run: |
-        rm ~/.git-credentials
+        rm -f ~/.git-credentials
