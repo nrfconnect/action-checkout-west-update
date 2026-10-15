@@ -44,7 +44,7 @@ runs:
   using: "composite"
   steps:
     - name: Checkout repo
-      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         ref: ${{ inputs.git-ref }}
         path: ${{ inputs.path }}
@@ -77,6 +77,21 @@ runs:
         git fetch origin "$BASE_REF"
         git rebase "origin/$BASE_REF"
 
+    - name: Install west
+      shell: bash
+      run: |
+        if command -v west >/dev/null 2>&1; then
+          west --version
+          exit 0
+        fi
+        if [ "${{ runner.os }}" = "macOS" ]; then
+          python3 -m venv "${RUNNER_TEMP}/west-venv"
+          "${RUNNER_TEMP}/west-venv/bin/pip" install west
+          echo "${RUNNER_TEMP}/west-venv/bin" >> "$GITHUB_PATH"
+        else
+          pip3 install west
+        fi
+
     - name: West update
       env:
         WEST_UPDATE_ARGS: ${{ inputs.west-update-args }}
@@ -84,7 +99,6 @@ runs:
       working-directory: ${{ inputs.path }}
       shell: bash
       run: |
-        pip3 install west
         WEST_INIT_ARGS=""
         if [ -n "$MANIFEST_FILE_PATH" ]; then
           WEST_INIT_ARGS="--manifest-file=$MANIFEST_FILE_PATH"
