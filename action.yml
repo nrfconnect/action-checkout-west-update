@@ -4,41 +4,40 @@
 name: 'checkout and west update'
 description: 'checkout sources and runs west update'
 inputs:
-    git-fetch-depth:
-      required: false
-      type: string
-      default: 1
-      description: 'git fetch depth passed to checkout action.'
-    git-ref:
-      required: false
-      default: ''
-      type: string
-      description: 'git branch, tag or SHA passed to checkout action.'
-    rebase:
-      required: false
-      default: 'false'
-      type: string
-      description: 'If true, perform a git rebase after checkout. Effective only in PR workflows.'
-    path:
-      required: false
-      default: 'ncs/nrf'
-      description: 'Path passed to checkout action.'
-    west-token:
-      required: false
-      default: ''
-      type: string
-      description: 'Token used during the west update.'
-    west-update-args:
-      type: string
-      required: false
-      default: '--narrow -o=--depth=1'
-      description: 'Arguments for west update command.'
-    manifest-file-path:
-      type: string
-      required: false
-      default: ''
-      description: 'If set, passed to west init as --manifest-file=<manifest-file-path>.'
-
+  git-fetch-depth:
+    required: false
+    type: string
+    default: 1
+    description: 'git fetch depth passed to checkout action.'
+  git-ref:
+    required: false
+    default: ''
+    type: string
+    description: 'git branch, tag or SHA passed to checkout action.'
+  rebase:
+    required: false
+    default: 'false'
+    type: string
+    description: 'If true, perform a git rebase after checkout. Effective only in PR workflows.'
+  path:
+    required: false
+    default: 'ncs/nrf'
+    description: 'Path passed to checkout action.'
+  west-token:
+    required: false
+    default: ''
+    type: string
+    description: 'Token used during the west update.'
+  west-update-args:
+    type: string
+    required: false
+    default: '--narrow -o=--depth=1'
+    description: 'Arguments for west update command.'
+  manifest-file-path:
+    type: string
+    required: false
+    default: ''
+    description: 'If set, passed to west init as --manifest-file=<manifest-file-path>.'
 
 runs:
   using: "composite"
@@ -104,7 +103,13 @@ runs:
           WEST_INIT_ARGS="--manifest-file=$MANIFEST_FILE_PATH"
         fi
         west init ${WEST_INIT_ARGS:+"$WEST_INIT_ARGS"} --local .
-        west update $WEST_UPDATE_ARGS
+        
+        # Retry west update once after 30s on failure
+        if ! west update $WEST_UPDATE_ARGS; then
+          echo "west update failed; retrying once after 30s..."
+          sleep 30
+          west update $WEST_UPDATE_ARGS
+        fi
 
     - name: Remove git credentials
       if: ${{ always() && inputs.west-token != '' }}
